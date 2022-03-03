@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
+import 'tabsPage.dart';
 
 // 파이어베이스 초기화
 void main() async {
@@ -12,7 +13,7 @@ void main() async {
 class MyApp extends StatelessWidget {
   static FirebaseAnalytics analytics = FirebaseAnalytics.instance;
   static FirebaseAnalyticsObserver observer =
-  FirebaseAnalyticsObserver(analytics: analytics);
+      FirebaseAnalyticsObserver(analytics: analytics);
 
   const MyApp({Key? key}) : super(key: key);
 
@@ -88,9 +89,14 @@ class _FirebaseAppState extends State<FirebaseApp> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.tab),
-        onPressed: () {},
-      ),
+          child: const Icon(Icons.tab),
+          onPressed: () {
+            Navigator.of(context).push(MaterialPageRoute<TabsPage>(
+                settings: RouteSettings(name: '/tab'),
+                builder: (BuildContext context) {
+                  return TabsPage(observer);
+                }));
+          }),
     );
   }
 }
