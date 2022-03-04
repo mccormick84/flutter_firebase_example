@@ -4,6 +4,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_example/memoPage.dart';
 import 'package:flutter/material.dart';
 import 'tabsPage.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 // 파이어베이스 초기화
 void main() async {
@@ -27,8 +28,56 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
       ),
       navigatorObservers: <NavigatorObserver>[observer],
-      home: const MemoPage(),
+      home: FutureBuilder(
+        future: Firebase.initializeApp(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            // 에러 발생시 출력
+            return const Center(
+              child: Text('Error'),
+            );
+          }
+          // 선언 완료 후 표시할 위젯
+          if (snapshot.connectionState == ConnectionState.done) {
+            _initFirebaseMessaging(context);
+            _getToken();
+            return MemoPage();
+          }
+          // 선언되는 동안 표시할 위젯
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
+      ),
     );
+  }
+
+  _initFirebaseMessaging(BuildContext context) {
+    FirebaseMessaging.onMessage.listen((RemoteMessage event) {
+      debugPrint(event.notification!.title);
+      debugPrint(event.notification!.body);
+      showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('알림'),
+              content: Text(event.notification!.body!),
+              actions: [
+                TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('OK'))
+              ],
+            );
+          });
+    });
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {});
+  }
+
+  void _getToken() async {
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    print('messaging.getToken(), ${await messaging.getToken()}');
   }
 }
 
