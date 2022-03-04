@@ -48,7 +48,6 @@ class _TabsPage extends State<TabsPage>
     });
   }
 
-
   // fireAnalyticsObserver 사용을 앱에 전달(구독)
   // didChangeDependencies(): initState() 함수 다음에 상태에 변화가 생겼을 때 호출
   @override
@@ -80,7 +79,9 @@ class _TabsPage extends State<TabsPage>
       body: TabBarView(
         controller: _controller,
         children: tabs.map((Tab tab) {
-          return Center(child: Text(tab.text!),);
+          return Center(
+            child: Text(tab.text!),
+          );
         }).toList(),
       ),
     );

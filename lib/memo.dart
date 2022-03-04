@@ -10,6 +10,11 @@ class Memo {
 
   //Map<dynamic, dynamic> values = dataSnapshot.value as Map<dynamic, dynamic>;
 
+  /*Future<void> _deleteMessage(DataSnapshot snapshot) async {
+    final messageRef = _messagesRef.child(snapshot.key!);
+    await messageRef.remove();
+  }*/
+
   Memo.fromSnapshot(DataSnapshot snapshot)
       : key = snapshot.key,
         title = snapshot.value['title'],
