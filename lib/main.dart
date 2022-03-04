@@ -90,7 +90,7 @@ class _FirebaseAppState extends State<FirebaseApp> {
           child: const Icon(Icons.tab),
           onPressed: () {
             Navigator.of(context).push(MaterialPageRoute<TabsPage>(
-                settings: RouteSettings(name: '/tab'),
+                settings: const RouteSettings(name: '/tab'),
                 builder: (BuildContext context) {
                   return TabsPage(observer);
                 }));
