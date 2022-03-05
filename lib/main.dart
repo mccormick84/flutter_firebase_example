@@ -5,11 +5,13 @@ import 'package:firebase_example/memoPage.dart';
 import 'package:flutter/material.dart';
 import 'tabsPage.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 // 파이어베이스 초기화
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await MobileAds.instance.initialize();
   runApp(MyApp());
 }
 
