@@ -11,6 +11,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  // 애드몹 광고 초기화 코드
   await MobileAds.instance.initialize();
   runApp(MyApp());
 }

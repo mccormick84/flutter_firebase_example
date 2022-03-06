@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'memo.dart';
 import 'memoAdd.dart';
 import 'memoDetail.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class MemoPage extends StatefulWidget {
   const MemoPage({Key? key}) : super(key: key);
@@ -20,6 +21,10 @@ class _MemoPageState extends State<MemoPage> {
   // 메모 목록을 나타낼 리스트
   List<Memo> memos = List.empty(growable: true);
 
+  // 광고 클래스 및 광고가 로드 되었는지 확인
+  BannerAd? _banner;
+  bool _loadingBanner = false;
+
   @override
   void initState() {
     super.initState();
@@ -35,8 +40,42 @@ class _MemoPageState extends State<MemoPage> {
     });
   }
 
+  Future<void> _createBanner(BuildContext context) async {
+    final AnchoredAdaptiveBannerAdSize? size =
+        await AdSize.getAnchoredAdaptiveBannerAdSize(
+            Orientation.portrait, MediaQuery.of(context).size.width.truncate());
+    if (size == null) {
+      return;
+    }
+    final BannerAd banner = BannerAd(
+      size: size,
+      adUnitId: 'ca-app-pub-5002621055556205/8027356184',
+      request: AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (Ad ad) {
+          print('$BannerAd loaded.');
+          setState(() {
+            _banner = ad as BannerAd?;
+          });
+        },
+        onAdFailedToLoad: (Ad ad, LoadAdError error) {
+          print('$BannerAd failedToLoad: $error');
+          ad.dispose();
+        },
+        onAdOpened: (Ad ad) => print('$BannerAd onAdOpened.'),
+        onAdClosed: (Ad ad) => print('$BannerAd onAdClosed.'),
+      ),
+    );
+    return banner.load();
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!_loadingBanner) {
+      _loadingBanner = true;
+      _createBanner(context;)
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('메모 앱'),
