@@ -1,6 +1,5 @@
-import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
-
+import 'package:firebase_database/firebase_database.dart';
 import 'memo.dart';
 
 class MemoDetailPage extends StatefulWidget {
@@ -31,12 +30,13 @@ class _MemoDetailPage extends State<MemoDetailPage> {
         title: Text(widget.memo.title),
       ),
       body: Container(
+        padding: EdgeInsets.all(20),
         child: Center(
           child: Column(
             children: <Widget>[
               TextField(
                 controller: titleController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                     labelText: '제목', fillColor: Colors.blueAccent),
               ),
               Expanded(
@@ -44,20 +44,20 @@ class _MemoDetailPage extends State<MemoDetailPage> {
                 controller: contentController,
                 keyboardType: TextInputType.multiline,
                 maxLines: 100,
-                decoration: const InputDecoration(labelText: '내용'),
+                decoration: InputDecoration(labelText: '내용'),
               )),
               MaterialButton(
                 onPressed: () {
                   Memo memo = Memo(titleController!.value.text,
                       contentController!.value.text, widget.memo.createTime);
                   widget.reference
-                      .child(widget.memo.key!)
+                      .child(widget.memo.createTime.toString())
                       .set(memo.toJson())
                       .then((_) {
                     Navigator.of(context).pop(memo);
                   });
                 },
-                child: const Text('수정하기'),
+                child: Text('수정하기'),
                 shape:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(1)),
               )

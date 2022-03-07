@@ -1,56 +1,53 @@
-import 'package:firebase_database/firebase_database.dart';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'memo.dart';
 import 'memoAdd.dart';
 import 'memoDetail.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class MemoPage extends StatefulWidget {
-  const MemoPage({Key? key}) : super(key: key);
-
   @override
-  State<MemoPage> createState() => _MemoPageState();
+  State<StatefulWidget> createState() => _MemoPage();
 }
 
-class _MemoPageState extends State<MemoPage> {
+class _MemoPage extends State<MemoPage> {
+  static final AdRequest request = AdRequest(
+    keywords: <String>['foo', 'bar'],
+    contentUrl: 'http://foo.com/bar.html',
+    nonPersonalizedAds: true,
+  );
+
+  AndroidNotificationChannel? channel;
+  FlutterLocalNotificationsPlugin? flutterLocalNotificationsPlugin;
   FirebaseDatabase? _database;
   DatabaseReference? reference;
-  final String _databaseURL =
-      'https://fir-example-bc7f8-default-rtdb.firebaseio.com/';
-
-  // 메모 목록을 나타낼 리스트
+  String _databaseURL = 'https://widgetapplication-98eee.firebaseio.com/';
   List<Memo> memos = List.empty(growable: true);
 
-  // 광고 클래스 및 광고가 로드 되었는지 확인
+  // final FirebaseMessaging _firebaseMessaging = FirebaseMexssaging();
+
   BannerAd? _banner;
   bool _loadingBanner = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _database = FirebaseDatabase(databaseURL: _databaseURL);
-    reference =
-        _database!.reference().child('memo'); // 데이터베이스 안에 memo 컬렉션을 만드는 코드
-
-    reference!.onChildAdded.listen((event) {
-      print(event.snapshot.value.toString());
-      setState(() {
-        memos.add(Memo.fromSnapshot(event.snapshot));
-      });
-    });
-  }
 
   Future<void> _createBanner(BuildContext context) async {
     final AnchoredAdaptiveBannerAdSize? size =
         await AdSize.getAnchoredAdaptiveBannerAdSize(
-            Orientation.portrait, MediaQuery.of(context).size.width.truncate());
+      Orientation.portrait,
+      MediaQuery.of(context).size.width.truncate(),
+    );
     if (size == null) {
       return;
     }
     final BannerAd banner = BannerAd(
       size: size,
-      adUnitId: 'ca-app-pub-5002621055556205/8027356184',
       request: AdRequest(),
+      adUnitId: BannerAd.testAdUnitId, // '### 하단 배너 광고 ID ###',
       listener: BannerAdListener(
         onAdLoaded: (Ad ad) {
           print('$BannerAd loaded.');
@@ -70,94 +67,182 @@ class _MemoPageState extends State<MemoPage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _database = FirebaseDatabase(databaseURL: _databaseURL);
+    reference = _database!.reference().child('memo');
+    reference!.onChildAdded.listen((event) {
+      print(event.snapshot.value.toString());
+      setState(() {
+        memos.add(Memo.fromSnapshot(event.snapshot));
+      });
+    });
+
+    channel = const AndroidNotificationChannel(
+      'high_importance_channel', // id
+      'High Importance Notifications', // title
+      'This channel is used for important notifications.', // description
+      importance: Importance.high,
+    );
+    flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  }
+
+  _initFirebaseMessaging(BuildContext context) async {
+    await Firebase.initializeApp();
+
+    FirebaseMessaging messaging = FirebaseMessaging.instance;
+    NotificationSettings settings = await messaging.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage? message) {
+      RemoteNotification? notification = message!.notification;
+      AndroidNotification? android = message.notification?.android;
+      if (notification != null && android != null) {
+        // showDialog(context: context, builder: (context){
+        //   return AlertDialog(title: Text("${notification.title}"), content: Text("${notification.body}"),);
+        // });
+
+        flutterLocalNotificationsPlugin?.show(
+            notification.hashCode,
+            notification.title,
+            notification.body,
+            NotificationDetails(
+              android: AndroidNotificationDetails(
+                channel!.id,
+                channel!.name,
+                channel!.description,
+                icon: 'launch_background',
+              ),
+            ));
+      }
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('A new onMessageOpenedApp event was published!');
+    });
+    print("messaging.getToken() , ${await messaging.getToken()}");
+  }
+
+  @override
   Widget build(BuildContext context) {
+    _initFirebaseMessaging(context);
+
     if (!_loadingBanner) {
       _loadingBanner = true;
-      _createBanner(context;)
+      _createBanner(context);
     }
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('메모 앱'),
+        title: Text('메모 앱'),
       ),
-      body: Container(
-        child: Center(
-          child: memos.isEmpty
-              ? const CircularProgressIndicator()
-              : GridView.builder(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2),
-                  itemBuilder: (context, index) {
-                    return Card(
-                      child: GridTile(
-                        child: Container(
-                          padding: const EdgeInsets.only(top: 20, bottom: 20),
-                          child: SizedBox(
-                            child: GestureDetector(
-                              onTap: () async {
-                                Memo? memo = await Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                        builder: (BuildContext context) =>
-                                            MemoDetailPage(
-                                                reference!, memos[index])));
-                                if (memo != null) {
-                                  setState(() {
-                                    memos[index].title = memo.title;
-                                    memos[index].content = memo.content;
-                                  });
-                                }
-                              },
-                              onLongPress: () {
-                                showDialog(
-                                    context: context,
-                                    builder: (context) {
-                                      return AlertDialog(
-                                        title: Text(memos[index].title),
-                                        content: const Text('삭제하시겠습니까?'),
-                                        actions: <Widget>[
-                                          TextButton(
-                                            onPressed: () {
-                                              reference!
-                                                  .child(memos[index].key!)
-                                                  .remove()
-                                                  .then((_) {
-                                                setState(() {
-                                                  memos.removeAt(index);
-                                                  Navigator.of(context).pop();
-                                                });
-                                              });
-                                            },
-                                            child: const Text('예'),
-                                          ),
-                                          TextButton(
-                                              onPressed: () {
-                                                Navigator.of(context).pop();
-                                              },
-                                              child: const Text('아니오')),
-                                        ],
-                                      );
-                                    });
-                              },
-                              child: Text(memos[index].content),
+      body: Stack(
+        alignment: AlignmentDirectional.bottomCenter,
+        children: <Widget>[
+          Container(
+            child: Center(
+              child: memos.length == 0
+                  ? CircularProgressIndicator()
+                  : GridView.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2),
+                      itemBuilder: (context, index) {
+                        return Card(
+                          child: GridTile(
+                            child: Container(
+                              padding: EdgeInsets.only(top: 20, bottom: 20),
+                              child: SizedBox(
+                                child: GestureDetector(
+                                  onTap: () async {
+                                    Memo? memo = await Navigator.of(context)
+                                        .push(MaterialPageRoute<Memo>(
+                                            builder: (BuildContext context) =>
+                                                MemoDetailPage(
+                                                    reference!, memos[index])));
+                                    if (memo != null) {
+                                      setState(() {
+                                        memos[index].title = memo.title;
+                                        memos[index].content = memo.content;
+                                      });
+                                    }
+                                  },
+                                  onLongPress: () {
+                                    showDialog(
+                                        context: context,
+                                        builder: (context) {
+                                          return AlertDialog(
+                                            title: Text(memos[index].title),
+                                            content: Text('삭제하시겠습니까?'),
+                                            actions: <Widget>[
+                                              FlatButton(
+                                                  onPressed: () {
+                                                    reference!
+                                                        .child(
+                                                            memos[index].key!)
+                                                        .remove()
+                                                        .then((_) {
+                                                      setState(() {
+                                                        memos.removeAt(index);
+                                                        Navigator.of(context)
+                                                            .pop();
+                                                      });
+                                                    });
+                                                  },
+                                                  child: Text('예')),
+                                              FlatButton(
+                                                  onPressed: () {
+                                                    Navigator.of(context).pop();
+                                                  },
+                                                  child: Text('아니요')),
+                                            ],
+                                          );
+                                        });
+                                  },
+                                  child: Text(memos[index].content),
+                                ),
+                              ),
                             ),
+                            header: Text(memos[index].title),
+                            footer:
+                                Text(memos[index].createTime.substring(0, 10)),
                           ),
-                        ),
-                        header: Text(memos[index].title),
-                        footer: Text(memos[index].createTime.substring(0, 10)),
-                      ),
-                    );
-                  },
-                  itemCount: memos.length,
-                ),
+                        );
+                      },
+                      itemCount: memos.length,
+                    ),
+            ),
+          ),
+          if (_banner != null)
+            Container(
+              color: Colors.green,
+              width: _banner!.size.width.toDouble(),
+              height: _banner!.size.height.toDouble(),
+              child: AdWidget(ad: _banner!),
+            ),
+        ],
+      ),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(bottom: 40),
+        child: FloatingActionButton(
+          onPressed: () {
+            Navigator.of(context).push(MaterialPageRoute(
+                builder: (context) => MemoAddApp(reference!)));
+          },
+          child: Icon(Icons.add),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => MemoAddPage(reference!)));
-        },
-        child: const Icon(Icons.add),
-      ),
     );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _banner?.dispose();
   }
 }
